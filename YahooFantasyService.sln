@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31624.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YahooFantasyService", "YahooFantasyService.csproj", "{76FA0AC1-DA21-438C-8010-E888588FF848}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{76FA0AC1-DA21-438C-8010-E888588FF848}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76FA0AC1-DA21-438C-8010-E888588FF848}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76FA0AC1-DA21-438C-8010-E888588FF848}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76FA0AC1-DA21-438C-8010-E888588FF848}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E46C7A50-7790-4B5B-877B-AF363A17DDE0}
+	EndGlobalSection
+EndGlobal
