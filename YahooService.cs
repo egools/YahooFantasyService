@@ -1,15 +1,12 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Flurl.Http;
+using Flurl.Http.Configuration;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
 using static YahooFantasyService.YahooEnums;
 
@@ -20,10 +17,14 @@ namespace YahooFantasyService
         public YahooService(IOptions<YahooServiceSettings> options)
         {
             _settings = options.Value;
+            _dataClient = new PerBaseUrlFlurlClientFactory().Get(_settings.BaseUrl);
+            _authClient = new PerBaseUrlFlurlClientFactory().Get(_settings.TokenUrl);
         }
 
         private YahooAuthToken _yahooToken;
         private readonly YahooServiceSettings _settings;
+        private readonly IFlurlClient _authClient;
+        private readonly IFlurlClient _dataClient;
         private IYahooBaseUri _uriBuilder => YahooUriBuilder.WithBaseUrl(_settings.BaseUrl);
 
         public async Task<LeagueSettings> GetLeagueSettings(int year, int seasonId)
@@ -134,27 +135,23 @@ namespace YahooFantasyService
         public async Task<YahooApiResultBase> CallYahooFantasyApi<T>(string uri)
         {
             await RefreshAuthToken();
+            var response = await _dataClient
+                .Request(uri)
+                .WithOAuthBearerToken(_yahooToken.AccessToken)
+                .GetAsync();
 
-            var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _yahooToken.AccessToken);
-            var response = await client.GetAsync(uri);
-            client.Dispose();
-            var jsonResult = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
+            if (response.StatusCode == (int)HttpStatusCode.OK)
             {
-                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                JObject o = JObject.Parse(jsonResult);
+                JObject o = JObject.Parse(await response.GetStringAsync());
                 var fantasyContent = o.SelectToken("fantasy_content").ToString();
                 var resultBase = JsonConvert.DeserializeObject<T>(fantasyContent) as YahooApiResultBase;
-                Console.WriteLine($"Deserialization: {stopwatch.ElapsedMilliseconds}");
                 return resultBase;
             }
             else
             {
-                JObject o = JObject.Parse(jsonResult);
+                JObject o = JObject.Parse(await response.GetStringAsync());
                 var errorResult = o.SelectToken("error").ToObject<YahooErrorApiResult>();
-                errorResult.StatusCode = response.StatusCode;
+                errorResult.StatusCode = (HttpStatusCode)response.StatusCode;
                 throw new YahooServiceException(errorResult);
             }
         }
@@ -163,7 +160,6 @@ namespace YahooFantasyService
         {
             if (_yahooToken is null || _yahooToken.TokenExpiration < DateTime.UtcNow)
             {
-                var client = new HttpClient();
                 var body = new Dictionary<string, string>
                 {
                     { "grant_type", "refresh_token" },
@@ -171,13 +167,14 @@ namespace YahooFantasyService
                     { "refresh_token", _settings.RefreshToken }
                 };
 
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _settings.AuthHeader);
-                var response = await client.PostAsync(_settings.TokenUrl, new FormUrlEncodedContent(body));
-                client.Dispose();
+                var response = await _authClient
+                    .Request()
+                    .WithHeader("Authorization", $"Basic {_settings.AuthHeader}")
+                    .PostJsonAsync(body);
 
-                if (response.IsSuccessStatusCode)
+                if (response.StatusCode == (int)HttpStatusCode.OK)
                 {
-                    var token = JsonConvert.DeserializeObject<YahooTokenResponse>(await response.Content.ReadAsStringAsync());
+                    var token = JsonConvert.DeserializeObject<YahooTokenResponse>(await response.GetStringAsync());
                     _yahooToken = new YahooAuthToken
                     {
                         AccessToken = token.AccessToken,
@@ -192,8 +189,8 @@ namespace YahooFantasyService
                     }
                     else
                     {
-                        var error = JObject.Parse(await response.Content.ReadAsStringAsync());
-                        throw new HttpRequestException(error.Value<string>("error_description"), null, response.StatusCode);
+                        var error = JObject.Parse(await response.GetStringAsync());
+                        throw new HttpRequestException(error.Value<string>("error_description"), null, (HttpStatusCode)response.StatusCode);
                     }
                 }
             }
@@ -217,7 +214,9 @@ namespace YahooFantasyService
             { 2017, 371 },
             { 2018, 380 },
             { 2019, 390 },
-            { 2020, 399 }
+            { 2020, 399 },
+            { 2021, 406 },
+            { 2022, 414 }
         };
     }
 }
