@@ -17,8 +17,8 @@ namespace YahooFantasyService
         public YahooService(IOptions<YahooServiceSettings> options)
         {
             _settings = options.Value;
-            _dataClient = new PerBaseUrlFlurlClientFactory().Get(_settings.BaseUrl);
-            _authClient = new PerBaseUrlFlurlClientFactory().Get(_settings.TokenUrl);
+            _dataClient = new FlurlClient(_settings.BaseUrl);
+            _authClient = new FlurlClient(_settings.TokenUrl);
         }
 
         private YahooAuthToken _yahooToken;
